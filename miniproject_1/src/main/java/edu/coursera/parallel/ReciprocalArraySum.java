@@ -23,10 +23,15 @@ public final class ReciprocalArraySum {
     protected static double seqArraySum(final double[] input) {
         double sum = 0;
 
+        long startTime = System.nanoTime();
+
         // Compute sum of reciprocals of array elements
         for (int i = 0; i < input.length; i++) {
             sum += 1 / input[i];
         }
+
+        long endTime = System.nanoTime();
+        System.out.println("This took " + (endTime-startTime) / 1000000 + " milliseconds");
 
         return sum;
     }
@@ -126,7 +131,10 @@ public final class ReciprocalArraySum {
 
         @Override
         protected void compute() {
-            // TODO
+            value = 0;
+            for(int i = startIndexInclusive; i <= endIndexExclusive; i++) {
+                value += 1/input[i];
+            }
         }
     }
 
@@ -140,15 +148,27 @@ public final class ReciprocalArraySum {
      * @return The sum of the reciprocals of the array input
      */
     protected static double parArraySum(final double[] input) {
+        long startTime = System.nanoTime();
         assert input.length % 2 == 0;
 
         double sum = 0;
 
-        // Compute sum of reciprocals of array elements
-        for (int i = 0; i < input.length; i++) {
-            sum += 1 / input[i];
-        }
+        // ForkJoinPool pool = new ForkJoinPool(2);
 
+        // Compute sum of reciprocals of array elements
+        int mid = input.length / 2;
+        // split the array into two halves
+        ReciprocalArraySumTask left_arr_sum = new ReciprocalArraySumTask(0, mid, input);
+        ReciprocalArraySumTask right_arr_sum = new ReciprocalArraySumTask(mid+1, input.length-1, input);
+        // invoke the left sum asynchronously
+        left_arr_sum.fork();
+        // compute the right sum
+        right_arr_sum.compute();
+        left_arr_sum.join();
+        sum = left_arr_sum.getValue() + right_arr_sum.getValue();
+
+        long endTime = System.nanoTime();
+        System.out.println("This took " + (endTime-startTime) / 1000000 + " milliseconds");
         return sum;
     }
 
@@ -172,5 +192,18 @@ public final class ReciprocalArraySum {
         }
 
         return sum;
+    }
+
+    public static void main(String[] args) {
+        // ReciprocalArraySum some = new ReciprocalArraySum();
+        int size = 200000000;
+        double input[] = new double[size];
+        // fill the array
+        for (int i = 0; i < input.length; i++) {
+            input[i] = i+1;
+        }
+        System.out.println(ReciprocalArraySum.seqArraySum(input));
+
+        System.out.println(ReciprocalArraySum.parArraySum(input));
     }
 }
