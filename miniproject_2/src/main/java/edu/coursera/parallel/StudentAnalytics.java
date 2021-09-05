@@ -1,9 +1,9 @@
 package edu.coursera.parallel;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -19,7 +19,7 @@ public final class StudentAnalytics {
      */
     public double averageAgeOfEnrolledStudentsImperative(
             final Student[] studentArray) {
-        List<Student> activeStudents = new ArrayList<Student>();
+        List<Student> activeStudents = new ArrayList<>();
 
         for (Student s : studentArray) {
             if (s.checkIsCurrent()) {
@@ -46,7 +46,11 @@ public final class StudentAnalytics {
      */
     public double averageAgeOfEnrolledStudentsParallelStream(
             final Student[] studentArray) {
-        throw new UnsupportedOperationException();
+        return Stream.of(studentArray).parallel().filter(
+                student -> student.checkIsCurrent()
+        ).mapToDouble(
+                student -> student.getAge()
+        ).average().getAsDouble();
     }
 
     /**
@@ -58,7 +62,7 @@ public final class StudentAnalytics {
      */
     public String mostCommonFirstNameOfInactiveStudentsImperative(
             final Student[] studentArray) {
-        List<Student> inactiveStudents = new ArrayList<Student>();
+        List<Student> inactiveStudents = new ArrayList<>();
 
         for (Student s : studentArray) {
             if (!s.checkIsCurrent()) {
@@ -66,7 +70,7 @@ public final class StudentAnalytics {
             }
         }
 
-        Map<String, Integer> nameCounts = new HashMap<String, Integer>();
+        Map<String, Integer> nameCounts = new HashMap<>();
 
         for (Student s : inactiveStudents) {
             if (nameCounts.containsKey(s.getFirstName())) {
@@ -100,7 +104,15 @@ public final class StudentAnalytics {
      */
     public String mostCommonFirstNameOfInactiveStudentsParallelStream(
             final Student[] studentArray) {
-        throw new UnsupportedOperationException();
+        // we will write a custom function here to count the distinct words
+//        ConcurrentHashMap<String, Integer> hm = new ConcurrentHashMap<>();
+        return Stream.of(studentArray).parallel().filter(
+                student -> !student.checkIsCurrent()
+        ).collect(Collectors.toMap(
+                student -> student.getFirstName(),student -> 1, (a, b) -> a+b)
+        ).entrySet().stream().parallel().reduce(
+                (x, y) -> (x.getValue() > y.getValue() ? x : y)
+        ).get().getKey();
     }
 
     /**
@@ -136,6 +148,23 @@ public final class StudentAnalytics {
      */
     public int countNumberOfFailedStudentsOlderThan20ParallelStream(
             final Student[] studentArray) {
-        throw new UnsupportedOperationException();
+        return (int) Stream.of(studentArray).parallel().filter(
+                student -> student.getAge() > 20 && !student.checkIsCurrent() && student.getGrade() < 65
+        ).count();
     }
+
+//    public static void main(String[] args) {
+//        System.out.println("hello");
+////        double[] average = new double[]{1,2,3};
+//        Student[] students = new Student[10];
+//        for (int i =0; i < 10; i++) {
+//            students[i] = new Student("abc", "def", i, i, true);
+//        }
+//        StudentAnalytics student = new StudentAnalytics();
+//        System.out.println(student.averageAgeOfEnrolledStudentsParallelStream(students));
+//
+//        System.out.println(student.countNumberOfFailedStudentsOlderThan20ParallelStream(students));
+//
+//        System.out.println(student.mostCommonFirstNameOfInactiveStudentsParallelStream(students));
+//    }
 }
