@@ -110,6 +110,88 @@ public final class OneDimAveragingPhaser {
     public static void runParallelFuzzyBarrier(final int iterations,
             final double[] myNew, final double[] myVal, final int n,
             final int tasks) {
+//        Phaser ph = new Phaser(0);
+//        ph.bulkRegister(tasks);
 
+        // create an array of phasers equal to the number of tasks
+        Phaser[] ph_array = new Phaser[tasks];
+        // register the phasers
+        for(int i=0; i<tasks; i++){
+            // since we are instantiating this in the main thread we need
+            // to initialise this with 1, see https://www.baeldung.com/java-phaser
+            ph_array[i] = new Phaser(1);
+            // in this case we can advance if 2 phasers have arrived
+            // no need to wait for all the phasers
+//            if (i == 0) {
+//                ph_array[i].bulkRegister(0);
+//            } else if (i == tasks-1) {
+//                ph_array[i].bulkRegister(0);
+//            } else {
+//                ph_array[i].bulkRegister(0);
+//            }
+        }
+
+//        System.out.println("here");
+
+        Thread[] threads = new Thread[tasks];
+
+        for (int ii = 0; ii < tasks; ii++) {
+            final int i = ii;
+            // instantiate a new thread to do work in this chunk
+            threads[ii] = new Thread(() -> {
+                // each thread receives a copy of the reference to the arrays
+                double[] threadPrivateMyVal = myVal;
+                double[] threadPrivateMyNew = myNew;
+                // get the starting point and the ending point of the current chunk
+                final int chunkSize = (n + tasks - 1) / tasks;
+                final int left = (i * chunkSize) + 1;
+                int right = (left + chunkSize) - 1;
+                if (right > n) right = n;
+                // this is the time step operation in jacobi iteration
+                for (int iter = 0; iter < iterations; iter++) {
+                    // here we iterate over each element of the array
+                    for (int j = left; j <= right; j++) {
+                        threadPrivateMyNew[j] = (threadPrivateMyVal[j - 1]
+                                + threadPrivateMyVal[j + 1]) / 2.0;
+                    }
+                    // we have completed one timestep in this thread so we
+                    // notify that we arrive
+                    ph_array[i].arrive();
+                    // if the previous and the next chunks have "arrived" the continue
+                    // the loop
+                    if(i > 0) {
+//                        System.out.println("i = " + (i-1) + " " + ph_array[i-1].getArrivedParties());
+                        ph_array[i-1].awaitAdvance(iter);
+
+                    }
+                    if(i < tasks-1) {
+//                        System.out.println("i = " + (i+1) + " " + ph_array[i+1].getArrivedParties());
+                        ph_array[i+1].awaitAdvance(iter);
+
+                    }
+                    double[] temp = threadPrivateMyNew;
+                    threadPrivateMyNew = threadPrivateMyVal;
+                    threadPrivateMyVal = temp;
+                }
+            });
+            threads[ii].start();
+        }
+
+        for (int ii = 0; ii < tasks; ii++) {
+            try {
+                threads[ii].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
+
+//    public static void main(String[] args) {
+//        System.out.println("hello world!");
+//        double[] myVal = new double[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+//        double[] myNew = new double[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+//        System.out.println("aaa");
+//        OneDimAveragingPhaser.runParallelFuzzyBarrier(3, myNew, myVal, 9, 3);
+//        System.out.println("bbb");
+//    }
 }

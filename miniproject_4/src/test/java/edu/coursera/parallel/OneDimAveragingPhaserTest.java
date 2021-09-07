@@ -111,10 +111,12 @@ public class OneDimAveragingPhaserTest extends TestCase {
 
         for (int r = 0; r < 3; r++) {
             final long barrierStartTime = System.currentTimeMillis();
+            System.out.println("there");
             runParallelBarrier(niterations, myNew, myVal, N, ntasks);
             final long barrierEndTime = System.currentTimeMillis();
 
             final long fuzzyStartTime = System.currentTimeMillis();
+            System.out.println("lizzie");
             OneDimAveragingPhaser.runParallelFuzzyBarrier(niterations, myNewRef, myValRef, N, ntasks);
             final long fuzzyEndTime = System.currentTimeMillis();
 
